@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "TP3": {
+      "commandName": "Project",
+      "commandLineArgs": "--config config.yaml"
+    }
+  }
+}
