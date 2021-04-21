@@ -63,7 +63,7 @@ namespace TP3
                     break;
                 case "tanh":
                     activationFunction = Math.Tanh;
-                    activationFunctionD = val => (Math.Cosh(val)*Math.Cosh(val) - Math.Sinh(val)*Math.Sinh(val)) / (Math.Cosh(val)*Math.Cosh(val));
+                    activationFunctionD = val => 1 - Math.Tanh(val)*Math.Tanh(val);
                     break;
                 default: Console.WriteLine("Ingrese la función de activación."); return;
             }
