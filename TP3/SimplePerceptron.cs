@@ -30,7 +30,7 @@ namespace TP3
             double sum = 0;
             for(int i = 0; i < input.Length; i++)
             {
-                double dif = desiredOutput[i] - input[i] * w;
+                double dif = desiredOutput[i] - ActivationFunction(input[i] * w);
                 sum += dif * dif;
             }
             return sum * 0.5d;
@@ -45,7 +45,7 @@ namespace TP3
             //Agrego el valor 1 al principio del input.
             for (int i = 0; i < input.Length; i++)
             {
-                input[i] = Vector<double>.Build.Dense(new double[] { 1 }.Concat(trainingInput[i].ToArray()).ToArray());
+                input[i] = Vector<double>.Build.Dense(new double[] { 1 }.Concat(trainingInput[i]).ToArray());
             }
             int p = input.Length;
             Vector<double> w = CreateVector.Random<double>(N + 1, new ContinuousUniform(-1d, 1d));
@@ -60,8 +60,9 @@ namespace TP3
                     n = 0;
                 }
                 int ix = SystemRandomSource.Default.Next(p);
-                double act = ActivationFunction(input[ix] * w);
-                w += LearningRate * (desiredOutput[ix] - act) * input[ix] * ActivationFunctionDerivative(act);
+                double h = input[ix] * w;
+                double act = ActivationFunction(h);
+                w += LearningRate * (desiredOutput[ix] - act) * input[ix] * ActivationFunctionDerivative(h);
                 
                 error = CalculateError(input, desiredOutput, w);
                 if(error < error_min)
