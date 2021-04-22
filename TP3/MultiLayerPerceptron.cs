@@ -39,7 +39,12 @@ namespace TP3
         {
             Vector<double> V = input;
             for (int k = 0; k < layers.Length; k++)
+            {
+                //Agrego el valor 1 al principio de cada salida intermedia.
+                if (k > 0 || (W[k].ColumnCount != V.Count))
+                    V = Vector<double>.Build.DenseOfEnumerable(new double[] { 1 }.Concat(V));
                 V = (W[k] * V).Map(g[k]);
+            }
             return V;
         }
 
@@ -49,7 +54,7 @@ namespace TP3
             //Agrego el valor 1 al principio del input.
             for (int i = 0; i < input.Length; i++)
             {
-                input[i] = Vector<double>.Build.Dense(new double[]{1}.Concat(trainingInput[i]).ToArray());
+                input[i] = Vector<double>.Build.DenseOfEnumerable(new double[]{1}.Concat(trainingInput[i]));
             }
             int M = layers.Length;
             //Inicializo los pesos en valores aleatorios.
@@ -61,7 +66,7 @@ namespace TP3
             Vector<double>[] delta = new Vector<double>[M];
             Matrix<double>[] deltaW = new Matrix<double>[M];
             Vector<double>[] h = new Vector<double>[M];
-            double error = 2 * minError;
+            double error = 2 * minError + 1;
 
             for(int i = 0; i < maxIter && error > minError; i++)
             {
@@ -76,17 +81,32 @@ namespace TP3
                         h[k] = W[k] * V[k];
                         Vector<double> activationOutput = h[k].Map(g[k]);
                         //Agrego el valor 1 al principio de cada salida intermedia.
-                        V[k + 1] = k + 1 < M ? Vector<double>.Build.Dense(new double[]{1}.Concat(activationOutput).ToArray()) : h[k].Map(g[k]);
+                        V[k + 1] = k + 1 < M ? Vector<double>.Build.DenseOfEnumerable(new double[]{1}.Concat(activationOutput)) : activationOutput;
                     }
                     delta[M - 1] = h[M - 1].Map(gprime[M - 1]).PointwiseMultiply(desiredOutput[index] - V[M]);
                     for (int k = M - 1; k > 0; k--)
-                        delta[k - 1] = h[k - 1].Map(gprime[k - 1]).PointwiseMultiply(W[k] * delta[k]);
+                    {
+                        var aux = W[k].TransposeThisAndMultiply(delta[k]);
+                        //Salteo el primer valor ya que corresponde al delta de la neurona extra para el umbral (siempre tiene que tener activacion igual a 1).
+                        aux = Vector<double>.Build.DenseOfEnumerable(aux.Skip(1));
+                        delta[k - 1] = h[k - 1].Map(gprime[k - 1]).PointwiseMultiply(aux);
+
+                    }
                     for (int k = 0; k < M; k++)
-                        deltaW[k] += LearningRate * delta[k].OuterProduct(V[k]);
+                    {
+                        if(deltaW[k] != null)
+                            deltaW[k] += LearningRate * delta[k].OuterProduct(V[k]);
+                        else
+                            deltaW[k] = LearningRate * delta[k].OuterProduct(V[k]);
+                    }
 
                     if(j % batch == 0)
+                    {
                         for (int k = 0; k < M; k++)
                             W[k] += deltaW[k];
+                        //Reinicio los deltaW para el proximo lote.
+                        Array.Fill(deltaW, null);
+                    }
                 }
                 if(j % batch != 0)
                     for (int k = 0; k < M; k++)
