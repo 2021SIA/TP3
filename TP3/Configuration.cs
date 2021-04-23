@@ -12,6 +12,7 @@ namespace TP2
         public string Activation { get; set; }
         public double LearningRate { get; set; }
         public int Epochs { get; set; }
+        public double? TestSize { get; set; } = 0.0;
         public int? Batch { get; set; } = 1;
         public int[] Layers { get; set; } = null;
         public double? MinError { get; set; } = 0.0;

@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace TP3
 {
-    public class SimplePerceptron
+    public class SimplePerceptron : Perceptron
     {
         public int N { get; private set; }
         public Vector<double> W { get; set; }
@@ -52,7 +52,7 @@ namespace TP3
             double error = 1, error_min = p * 2;
             Vector<double> w_min = W;
 
-            for(int i = 0, n = 0; i < maxIter && error > 0; i++, n++)
+            for(int i = 0, n = 0; i < maxIter && error_min > 0; i++, n++)
             {
                 if(n > 100 * p)
                 {
@@ -72,6 +72,13 @@ namespace TP3
                 }
             }
             W = w_min;
+        }
+
+        public Vector<double> Map(Vector<double> input)
+        {
+            Vector<double> aux = Vector<double>.Build.Dense(new double[] { 1 }.Concat(input).ToArray());
+            //Agrego el valor 1 al principio del input.
+            return Vector<double>.Build.DenseOfArray(new double[] { ActivationFunction(aux * W) });
         }
     }
 }

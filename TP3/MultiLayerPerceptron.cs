@@ -8,7 +8,7 @@ using MathNet.Numerics.Random;
 
 namespace TP3
 {
-    public class MultiLayerPerceptron
+    public class MultiLayerPerceptron : Perceptron
     {
         public double LearningRate { get; set; }
         private int[] layers;
