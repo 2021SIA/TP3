@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using TP2;
+using static TP3.PerceptronUtils;
 
 namespace TP3
 {
@@ -24,17 +25,6 @@ namespace TP3
             }
             return trainingInput;
         }
-        static List<Vector<double>> Normalize(IEnumerable<Vector<double>> values, double rangeBottom, double rangeTop)
-        {
-            if (values.Count() == 0) return values.ToList();
-            var max = values.Max(v => v.Max());
-            var min = values.Min(v => v.Min());
-            return values.Select(v => Normalize(v,max,min,rangeBottom,rangeTop)).ToList();
-        }
-        static Vector<double> Normalize(Vector<double> vector, double max, double min, double rangeBottom, double rangeTop)
-        {
-            return vector.Map(value => ((value - min) / (max - min)) * (rangeTop - rangeBottom) + rangeBottom);
-        }
         static void PrintOutput(Perceptron p, IEnumerable<Vector<double>> input, IEnumerable<Vector<double>> output, string activation)
         {
             if (input.Count() == 0) return;
@@ -53,28 +43,17 @@ namespace TP3
                     $"Value:{string.Join(',', value)}   " +
                     $"Error:{string.Join(',', 0.5 * (output.ElementAt(i) - value) * (output.ElementAt(i) - value))}");
             }
-        }
-        public static double Sigmoid(double value)
-        {
-            return 1.0 / (1.0 + Math.Exp(-value));
-        }
-        static List<(Vector<double>[], Vector<double>[])> GetAllTestGroups(IEnumerable<Vector<double>> training, int testSize)
-        {
-            var groups = new List<(Vector<double>[], Vector<double>[])>();
-            if (testSize == 0)
+            Console.WriteLine();
+            //Si usa una funcion de activacion de escalon, es un metodo de clasificacion (en dos clases)
+            if(activation == "step")
             {
-                groups.Add((training.ToArray(), new Vector<double>[0]));
+                ClassifierMetrics metrics = GetClassifierMetrics(p, input, output);
+                Console.WriteLine($"Accuracy: {metrics.Accuracy}");
+                Console.WriteLine($"Precision: {metrics.Precision}");
+                Console.WriteLine($"Recall: {metrics.Recall}");
+                Console.WriteLine($"F1-Score: {metrics.F1Score}");
             }
-            else
-            {
-                for (int i = 0; i < training.Count() / testSize; i++)
-                {
-                    groups.Add((training.Take(testSize * i).Concat(training.Skip(testSize * (i+1))).ToArray(), training.Skip(testSize * i).Take(testSize).ToArray()));
-                }
-            }
-            return groups;
         }
-
 
         /// <summary>
         /// Simple and Multi-layer Perceptrons
@@ -93,11 +72,14 @@ namespace TP3
             {
                 trainingInput = ParseTSV(configuration.TrainingInput);
                 trainingOutput = ParseTSV(configuration.TrainingOutput);
+
+                //Si se usa validacion cruzada, obtengo los k conjuntos de entrenamiento con su respectivo conjunto de prueba.
                 if (configuration.CrossValidation)
                 {
                     inputs = GetAllTestGroups(trainingInput, (int)Math.Round(configuration.TestSize.Value * trainingInput.Count));
                     outputs = GetAllTestGroups(trainingOutput, (int)Math.Round(configuration.TestSize.Value * trainingInput.Count));
                 }
+                //Si no se usa validacion cruzada, solo tomo como conjunto de prueba los ultimos TestSize del conjunto de entrenamiento.
                 else
                 {
                     inputs.Add(
@@ -134,15 +116,18 @@ namespace TP3
                 case "tanh":
                     activationFunction = Math.Tanh;
                     activationFunctionD = val => (1 - Math.Tanh(val)*Math.Tanh(val));
+                    //Normalizo el output deseado entre los valores -1 y 1.
                     normalizedOutputs = outputs.Select(o => (Normalize(o.training, -1, 1).ToArray(), Normalize(o.testing, -1, 1).ToArray())).ToList();
                     break;
                 case "sigmoid":
                     activationFunction = Sigmoid;
                     activationFunctionD = val => Sigmoid(val)*(1 - Sigmoid(val));
+                    //Normalizo el output deseado entre los valores 0 y 1.
                     normalizedOutputs = outputs.Select(o => (Normalize(o.training, 0, 1).ToArray(), Normalize(o.testing, 0, 1).ToArray())).ToList();
                     break;
                 default: Console.WriteLine("Ingrese la función de activación."); return;
             }
+            //Inicializo el perceptron.
             Perceptron perceptron;
             switch (configuration.Type)
             {
@@ -166,7 +151,8 @@ namespace TP3
                     break;
                 default: Console.WriteLine("Ingrese el tipo de perceptrón.");return;
             }
-            //Validacion cruzada para obtener el mejor conjunto de prueba
+
+            //Validacion cruzada para obtener el mejor conjunto de prueba .
             double minError = -1;
             (Vector<double>[] training, Vector<double>[] testing) optimumInput = (null, null);
             (Vector<double>[] training, Vector<double>[] testing) optimumOutput = (null, null);
@@ -185,6 +171,7 @@ namespace TP3
                 }
 
             }
+
             Console.WriteLine("Training Set: ");
             PrintOutput(perceptron, optimumInput.training, optimumOutput.training, configuration.Activation);
             Console.WriteLine();
