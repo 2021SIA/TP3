@@ -171,7 +171,10 @@ namespace TP3
                 }
 
             }
-
+            //Entreno al perceptron con el input y output optimo encontrado por el metodo de validacion cruzada.
+            perceptron.Learn(optimumInput.training.ToArray(), optimumOutput.training.ToArray(), optimumInput.testing.ToArray(),
+                optimumOutput.testing.ToArray(), configuration.Batch.Value, configuration.MinError.Value, configuration.Epochs);
+            
             Console.WriteLine("Training Set: ");
             PrintOutput(perceptron, optimumInput.training, optimumOutput.training, configuration.Activation);
             Console.WriteLine();
