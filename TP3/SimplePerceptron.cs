@@ -6,6 +6,7 @@ using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.Random;
 using MathNet.Numerics.Distributions;
 using System.Linq;
+using MathNet.Numerics;
 
 namespace TP3
 {
@@ -36,7 +37,7 @@ namespace TP3
             return sum * 0.5d;
         }
 
-        public void Learn(int maxIter, Vector<double>[] trainingInput, double[] desiredOutput)
+        public void Learn(Vector<double>[] trainingInput, double[] desiredOutput, int batch, double minError, int epochs)
         {
             Contract.Requires(trainingInput.Length == desiredOutput.Length);
             Contract.Requires(trainingInput[0].Count == N + 1);
@@ -49,26 +50,36 @@ namespace TP3
             }
             int p = input.Length;
             Vector<double> w = CreateVector.Random<double>(N + 1, new ContinuousUniform(-1d, 1d));
+            Vector<double> deltaW = null;
             double error = 1, error_min = p * 2;
             Vector<double> w_min = W;
 
-            for(int i = 0, n = 0; i < maxIter && error_min > 0; i++, n++)
+            for(int i = 0, n = 0; i < epochs && error_min > minError; i++, n++)
             {
-                if(n > 100 * p)
+                if (n > 100 * p)
                 {
                     w = CreateVector.Random<double>(N + 1, new ContinuousUniform(-1d, 1d));
                     n = 0;
                 }
-                int ix = SystemRandomSource.Default.Next(p);
-                double h = input[ix] * w;
-                double act = ActivationFunction(h);
-                w += LearningRate * (desiredOutput[ix] - act) * input[ix] * ActivationFunctionDerivative(h);
-                
-                error = CalculateError(input, desiredOutput, w);
-                if(error < error_min)
+                int[] rand = Combinatorics.GeneratePermutation(input.Length);
+                for(int j = 0; j < input.Length; j++)
                 {
-                    error_min = error;
-                    w_min = w;
+                    int ix = rand[j];
+                    double h = input[ix] * w;
+                    double act = ActivationFunction(h);
+                    Vector<double> delta = LearningRate * (desiredOutput[ix] - act) * input[ix] * ActivationFunctionDerivative(h);
+                    deltaW = deltaW == null ? delta : deltaW + delta;
+                    if (j % batch == 0)
+                    {
+                        w += deltaW;
+                        deltaW = null;
+                        error = CalculateError(input, desiredOutput, w);
+                        if (error < error_min)
+                        {
+                            error_min = error;
+                            w_min = w;
+                        }
+                    }
                 }
             }
             W = w_min;

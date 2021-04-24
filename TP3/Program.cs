@@ -66,7 +66,7 @@ namespace TP3
         {
             Configuration configuration = Configuration.FromYamlFile(config);
 
-            //Obtengo los conjuntos de entrenamiento.
+            //Obtengo los conjuntos de entrenamiento y prueba.
             List<Vector<double>> trainingInput = new List<Vector<double>>();
             List<Vector<double>> testInput = new List<Vector<double>>();
             List<Vector<double>> trainingOutput = new List<Vector<double>>();
@@ -133,7 +133,7 @@ namespace TP3
                         configuration.LearningRate,
                         activationFunction,
                         activationFunctionD);
-                    ((SimplePerceptron)perceptron).Learn(configuration.Epochs, trainingInput.ToArray(), normalizedTrainOutput.Select(v => v.At(0)).ToArray());
+                    ((SimplePerceptron)perceptron).Learn(trainingInput.ToArray(), normalizedTrainOutput.Select(v => v.At(0)).ToArray(),configuration.Batch.Value,configuration.MinError.Value,configuration.Epochs);
                     break;
                 case "multilayer":
                     var activations = new Func<double, double>[configuration.Layers.Length];

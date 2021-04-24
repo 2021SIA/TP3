@@ -48,7 +48,7 @@ namespace TP3
             return V;
         }
 
-        public void Learn(Vector<double>[] trainingInput, Vector<double>[] desiredOutput, int batch, double minError, int maxIter = 100)
+        public void Learn(Vector<double>[] trainingInput, Vector<double>[] desiredOutput, int batch, double minError, int epochs = 100)
         {
             Vector<double>[] input = new Vector<double>[trainingInput.Length];
             //Agrego el valor 1 al principio del input.
@@ -68,7 +68,7 @@ namespace TP3
             Vector<double>[] h = new Vector<double>[M];
             double error = 2 * minError + 1;
 
-            for(int i = 0; i < maxIter && error > minError; i++)
+            for(int i = 0; i < epochs && error > minError; i++)
             {
                 int[] rand = Combinatorics.GeneratePermutation(input.Length);
                 int j;
