@@ -101,11 +101,11 @@ namespace TP3
                 else
                 {
                     inputs.Add(
-                        (trainingInput.GetRange((int)Math.Round(trainingInput.Count * (1 - configuration.TestSize.Value)),(int)Math.Round(trainingInput.Count * configuration.TestSize.Value)).ToArray(),
-                        trainingInput.GetRange(0, (int)Math.Round(trainingInput.Count * (1 - configuration.TestSize.Value))).ToArray()));
+                        (trainingInput.GetRange(0, (int)Math.Round(trainingInput.Count * (1 - configuration.TestSize.Value))).ToArray(),
+                        trainingInput.GetRange((int)Math.Round(trainingInput.Count * (1 - configuration.TestSize.Value)),(int)Math.Round(trainingInput.Count * configuration.TestSize.Value)).ToArray()));
                     outputs.Add(
-                        (trainingOutput.GetRange((int)Math.Round(trainingOutput.Count * (1 - configuration.TestSize.Value)), (int)Math.Round(trainingOutput.Count * configuration.TestSize.Value)).ToArray(),
-                        trainingOutput.GetRange(0, (int)Math.Round(trainingOutput.Count * (1 - configuration.TestSize.Value))).ToArray()));
+                        (trainingOutput.GetRange(0, (int)Math.Round(trainingOutput.Count * (1 - configuration.TestSize.Value))).ToArray(),
+                        trainingOutput.GetRange((int)Math.Round(trainingOutput.Count * (1 - configuration.TestSize.Value)), (int)Math.Round(trainingOutput.Count * configuration.TestSize.Value)).ToArray()));
                 }
             }
             catch (Exception ex)
