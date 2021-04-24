@@ -16,6 +16,8 @@ namespace TP2
         public int? Batch { get; set; } = 1;
         public int[] Layers { get; set; } = null;
         public double? MinError { get; set; } = 0.0;
+        public bool CrossValidation { get; set; } = false;
+
         public static Configuration FromYamlFile(string path)
         {
             var deserializer = new DeserializerBuilder()

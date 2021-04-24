@@ -24,7 +24,7 @@ namespace TP3
             this.g = g;
             this.gprime = gprime;
         }
-        private double CalculateError(Vector<double>[] input, Vector<double>[] desiredOutput)
+        public double CalculateError(Vector<double>[] input, Vector<double>[] desiredOutput)
         {
             double sum = 0;
             for (int i = 0; i < input.Length; i++)
@@ -48,7 +48,14 @@ namespace TP3
             return V;
         }
 
-        public void Learn(Vector<double>[] trainingInput, Vector<double>[] desiredOutput, int batch, double minError, int epochs = 100)
+        public void Learn(
+            Vector<double>[] trainingInput, 
+            Vector<double>[] trainingOutput,
+            Vector<double>[] testInput,
+            Vector<double>[] testOutput,
+            int batch, 
+            double minError, 
+            int epochs = 100)
         {
             Vector<double>[] input = new Vector<double>[trainingInput.Length];
             //Agrego el valor 1 al principio del input.
@@ -83,7 +90,7 @@ namespace TP3
                         //Agrego el valor 1 al principio de cada salida intermedia.
                         V[k + 1] = k + 1 < M ? Vector<double>.Build.DenseOfEnumerable(new double[]{1}.Concat(activationOutput)) : activationOutput;
                     }
-                    delta[M - 1] = h[M - 1].Map(gprime[M - 1]).PointwiseMultiply(desiredOutput[index] - V[M]);
+                    delta[M - 1] = h[M - 1].Map(gprime[M - 1]).PointwiseMultiply(trainingOutput[index] - V[M]);
                     for (int k = M - 1; k > 0; k--)
                     {
                         var aux = W[k].TransposeThisAndMultiply(delta[k]);
@@ -112,7 +119,7 @@ namespace TP3
                     for (int k = 0; k < M; k++)
                         W[k] += deltaW[k];
 
-                error = CalculateError(input, desiredOutput);
+                error = CalculateError(input, trainingOutput);
             }
         }
     }

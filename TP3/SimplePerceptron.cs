@@ -28,25 +28,44 @@ namespace TP3
         }
         private double CalculateError(Vector<double>[] input, double[] desiredOutput, Vector<double> w)
         {
+            if(input[0].Count < w.Count)
+            {
+                //Agrego el valor 1 al principio del input.
+                for (int i = 0; i < input.Length; i++)
+                    input[i] = Vector<double>.Build.DenseOfEnumerable(new double[] { 1 }.Concat(input[i]));
+            }
             double sum = 0;
-            for(int i = 0; i < input.Length; i++)
+            for (int i = 0; i < input.Length; i++)
             {
                 double dif = desiredOutput[i] - ActivationFunction(input[i] * w);
                 sum += dif * dif;
             }
             return sum * 0.5d;
         }
+        public double CalculateError(Vector<double>[] input, Vector<double>[] desiredOutput) => CalculateError(input, desiredOutput.Select(o => o.At(0)).ToArray(), W);
 
-        public void Learn(Vector<double>[] trainingInput, double[] desiredOutput, int batch, double minError, int epochs)
+        public void Learn(
+            Vector<double>[] trainingInput,
+            Vector<double>[] trainingOutput,
+            Vector<double>[] testInput,
+            Vector<double>[] testOutput,
+            int batch,
+            double minError,
+            int epochs = 100)
         {
-            Contract.Requires(trainingInput.Length == desiredOutput.Length);
+            Contract.Requires(trainingInput.Length == trainingOutput.Length);
+            Contract.Requires(testInput.Length == testOutput.Length);
             Contract.Requires(trainingInput[0].Count == N + 1);
+            Contract.Requires(testInput[0].Count == N + 1);
 
-            Vector<double>[] input = new Vector<double>[trainingInput.Length];
+            double[] desiredTrainingOutput = trainingOutput.Select(o => o.At(0)).ToArray();
+            double[] desiredTestOutput = trainingOutput.Select(o => o.At(0)).ToArray();
+
             //Agrego el valor 1 al principio del input.
+            Vector<double>[] input = new Vector<double>[trainingInput.Length];
             for (int i = 0; i < input.Length; i++)
             {
-                input[i] = Vector<double>.Build.Dense(new double[] { 1 }.Concat(trainingInput[i]).ToArray());
+                input[i] = Vector<double>.Build.DenseOfEnumerable(new double[] { 1 }.Concat(trainingInput[i]));
             }
             int p = input.Length;
             Vector<double> w = CreateVector.Random<double>(N + 1, new ContinuousUniform(-1d, 1d));
@@ -67,13 +86,13 @@ namespace TP3
                     int ix = rand[j];
                     double h = input[ix] * w;
                     double act = ActivationFunction(h);
-                    Vector<double> delta = LearningRate * (desiredOutput[ix] - act) * input[ix] * ActivationFunctionDerivative(h);
+                    Vector<double> delta = LearningRate * (desiredTrainingOutput[ix] - act) * input[ix] * ActivationFunctionDerivative(h);
                     deltaW = deltaW == null ? delta : deltaW + delta;
                     if (j % batch == 0)
                     {
                         w += deltaW;
                         deltaW = null;
-                        error = CalculateError(input, desiredOutput, w);
+                        error = CalculateError(input, desiredTrainingOutput, w);
                         if (error < error_min)
                         {
                             error_min = error;
