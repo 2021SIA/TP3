@@ -58,9 +58,10 @@ namespace TP3
             int batch,
             double error,
             double error_min,
-            Vector<double> w_min)
+            Vector<double> w_min,
+            int[] rand)
         {
-            Func<double, double> function = x => loop(n, p, w, input, desiredTrainingOutput, deltaW, batch, error, error_min, w_min, x);
+            Func<double, double> function = x => loop(n, p, w, input, desiredTrainingOutput, deltaW, batch, error, error_min, w_min, x, rand);
             BrentSearch search = new BrentSearch(function, 0, 1);
             bool success = search.Minimize();
             double min = search.Solution;
@@ -79,14 +80,11 @@ namespace TP3
             double error,
             double error_min,
             Vector<double> w_min,
-            double lr)
+            double lr,
+            int[] rand)
         {
-            if (n > 100 * p)
-            {
-                w = CreateVector.Random<double>(N + 1, new ContinuousUniform(-1d, 1d));
-                n = 0;
-            }
-            int[] rand = Combinatorics.GeneratePermutation(input.Length);
+
+            
             for (int j = 0; j < input.Length; j++)
             {
                 int ix = rand[j];
@@ -141,14 +139,16 @@ namespace TP3
 
             for(int i = 0, n = 0; i < epochs && error_min > minError; i++, n++)
             {
-                double lr = optimizing(n, p, w, input, desiredTrainingOutput, deltaW, batch, error, error_min, w_min);
+                
                 if (n > 100 * p)
                 {
                     w = CreateVector.Random<double>(N + 1, new ContinuousUniform(-1d, 1d));
                     n = 0;
                 }
+                
                 int[] rand = Combinatorics.GeneratePermutation(input.Length);
-                for(int j = 0; j < input.Length; j++)
+                double lr = optimizing(n, p, w, input, desiredTrainingOutput, deltaW, batch, error, error_min, w_min, rand);
+                for (int j = 0; j < input.Length; j++)
                 {
                     int ix = rand[j];
                     double h = input[ix] * w;

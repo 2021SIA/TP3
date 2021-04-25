@@ -59,9 +59,10 @@ namespace TP3
             Vector<double>[] trainingOutput,
             Matrix<double>[] deltaW,
             int batch,
-            double error)
+            double error,
+            int[] rand)
         {
-            Func<double, double> function = x => loop(input, V, M, h, delta, trainingOutput, deltaW, batch, error, x);
+            Func<double, double> function = x => loop(input, V, M, h, delta, trainingOutput, deltaW, batch, error, x, rand);
             BrentSearch search = new BrentSearch(function, 0, 1);
             bool success = search.Minimize();   
             double min = search.Solution;
@@ -82,10 +83,9 @@ namespace TP3
             Matrix<double>[] deltaW,
             int batch,
             double error,
-            double lr
-            )
+            double lr,
+            int[] rand)
         {
-            int[] rand = Combinatorics.GeneratePermutation(input.Length);
             int j;
             for (j = 0; j < input.Length; j++)
             {
@@ -162,8 +162,9 @@ namespace TP3
             for(int i = 0; i < epochs && error > minError; i++)
             {
 
-                double lr = optimizing(input, V, M, h, delta, trainingOutput, deltaW, batch, error);
+                
                 int[] rand = Combinatorics.GeneratePermutation(input.Length);
+                double lr = optimizing(input, V, M, h, delta, trainingOutput, deltaW, batch, error, rand);
                 int j;
                 for (j = 0; j < input.Length; j++)
                 {
