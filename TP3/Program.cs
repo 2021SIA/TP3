@@ -156,6 +156,7 @@ namespace TP3
 
             (Vector<double>[] training, Vector<double>[] testing) optimumInput = (null, null);
             (Vector<double>[] training, Vector<double>[] testing) optimumOutput = (null, null);
+            (Vector<double>[] training, Vector<double>[] testing) optimumNormalizedOutput = (null, null);
             //Validacion cruzada para obtener el mejor conjunto de prueba.
             if (configuration.CrossValidation && configuration.TestSize != 0)
             {
@@ -172,6 +173,7 @@ namespace TP3
                         minError = error;
                         optimumInput = input;
                         optimumOutput = outputs[i];
+                        optimumNormalizedOutput = normalizedOutputs[i];
                     }
 
                 }
@@ -179,22 +181,23 @@ namespace TP3
             else
             {
                 optimumInput = inputs[0];
-                optimumOutput = normalizedOutputs[0];
+                optimumOutput = outputs[0];
+                optimumNormalizedOutput = normalizedOutputs[0];
             }
             //Entreno al perceptron con el input y output optimo encontrado por el metodo de validacion cruzada.
-            perceptron.Learn(optimumInput.training.ToArray(), optimumOutput.training.ToArray(), optimumInput.testing.ToArray(),
-                optimumOutput.testing.ToArray(), configuration.Batch, configuration.MinError, configuration.Epochs);
+            perceptron.Learn(optimumInput.training.ToArray(), optimumNormalizedOutput.training.ToArray(), optimumInput.testing.ToArray(),
+                optimumNormalizedOutput.testing.ToArray(), configuration.Batch, configuration.MinError, configuration.Epochs);
             
             Console.WriteLine("Training Set: ");
             PrintOutput(perceptron, optimumInput.training, optimumOutput.training, configuration.Activation);
-            var totalError = perceptron.CalculateError(optimumInput.training.ToArray(), optimumOutput.training.ToArray());
+            var totalError = perceptron.CalculateError(optimumInput.training.ToArray(), optimumNormalizedOutput.training.ToArray());
             Console.WriteLine($"Total Training Error: {totalError}");
             Console.WriteLine();
             if(optimumInput.testing.Length > 0)
             {
                 Console.WriteLine("Testing Set: ");
                 PrintOutput(perceptron, optimumInput.testing, optimumOutput.testing, configuration.Activation);
-                totalError = perceptron.CalculateError(optimumInput.testing.ToArray(), optimumOutput.testing.ToArray());
+                totalError = perceptron.CalculateError(optimumInput.testing.ToArray(), optimumNormalizedOutput.testing.ToArray());
                 Console.WriteLine($"Total Testing Error: {totalError}");
                 Console.WriteLine();
             }
