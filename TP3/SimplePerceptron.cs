@@ -28,6 +28,8 @@ namespace TP3
         }
         private double CalculateError(Vector<double>[] input, double[] desiredOutput, Vector<double> w)
         {
+            if (input.Length == 0) return 0;
+
             if(input[0].Count < w.Count)
             {
                 //Agrego el valor 1 al principio del input.

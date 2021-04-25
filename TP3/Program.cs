@@ -11,14 +11,16 @@ namespace TP3
     class Program
     {
 
-        static List<Vector<double>> ParseTSV(string path)
+        static List<Vector<double>> ParseTSV(string path, int recordLines)
         {
             List<Vector<double>> trainingInput = new List<Vector<double>>();
             using (var reader = new StreamReader(path))
             {
                 while (!reader.EndOfStream)
                 {
-                    var line = reader.ReadLine();
+                    var line = "";
+                    for(var i = 0; i < recordLines; i++)
+                        line += " " + reader.ReadLine();
                     var values = line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries).Select(val => Double.Parse(val));
                     trainingInput.Add(Vector<double>.Build.Dense(values.ToArray()));
                 }
@@ -70,24 +72,24 @@ namespace TP3
             var outputs = new List<(Vector<double>[] training, Vector<double>[] testing)>();
             try
             {
-                trainingInput = ParseTSV(configuration.TrainingInput);
-                trainingOutput = ParseTSV(configuration.TrainingOutput);
+                trainingInput = ParseTSV(configuration.TrainingInput,configuration.InputLines);
+                trainingOutput = ParseTSV(configuration.TrainingOutput,configuration.OutputLines);
 
                 //Si se usa validacion cruzada, obtengo los k conjuntos de entrenamiento con su respectivo conjunto de prueba.
-                if (configuration.CrossValidation)
+                if (configuration.CrossValidation && configuration.TestSize != 0.0)
                 {
-                    inputs = GetAllTestGroups(trainingInput, (int)Math.Round(configuration.TestSize.Value * trainingInput.Count));
-                    outputs = GetAllTestGroups(trainingOutput, (int)Math.Round(configuration.TestSize.Value * trainingInput.Count));
+                    inputs = GetAllTestGroups(trainingInput, (int)Math.Round(configuration.TestSize * trainingInput.Count));
+                    outputs = GetAllTestGroups(trainingOutput, (int)Math.Round(configuration.TestSize * trainingInput.Count));
                 }
                 //Si no se usa validacion cruzada, solo tomo como conjunto de prueba los ultimos TestSize del conjunto de entrenamiento.
                 else
                 {
                     inputs.Add(
-                        (trainingInput.GetRange(0, (int)Math.Round(trainingInput.Count * (1 - configuration.TestSize.Value))).ToArray(),
-                        trainingInput.GetRange((int)Math.Round(trainingInput.Count * (1 - configuration.TestSize.Value)),(int)Math.Round(trainingInput.Count * configuration.TestSize.Value)).ToArray()));
+                        (trainingInput.GetRange(0, (int)Math.Round(trainingInput.Count * (1 - configuration.TestSize))).ToArray(),
+                        trainingInput.GetRange((int)Math.Round(trainingInput.Count * (1 - configuration.TestSize)),(int)Math.Round(trainingInput.Count * configuration.TestSize)).ToArray()));
                     outputs.Add(
-                        (trainingOutput.GetRange(0, (int)Math.Round(trainingOutput.Count * (1 - configuration.TestSize.Value))).ToArray(),
-                        trainingOutput.GetRange((int)Math.Round(trainingOutput.Count * (1 - configuration.TestSize.Value)), (int)Math.Round(trainingOutput.Count * configuration.TestSize.Value)).ToArray()));
+                        (trainingOutput.GetRange(0, (int)Math.Round(trainingOutput.Count * (1 - configuration.TestSize))).ToArray(),
+                        trainingOutput.GetRange((int)Math.Round(trainingOutput.Count * (1 - configuration.TestSize)), (int)Math.Round(trainingOutput.Count * configuration.TestSize)).ToArray()));
                 }
             }
             catch (Exception ex)
@@ -152,36 +154,50 @@ namespace TP3
                 default: Console.WriteLine("Ingrese el tipo de perceptrón.");return;
             }
 
-            //Validacion cruzada para obtener el mejor conjunto de prueba .
-            double minError = -1;
             (Vector<double>[] training, Vector<double>[] testing) optimumInput = (null, null);
             (Vector<double>[] training, Vector<double>[] testing) optimumOutput = (null, null);
-            for (int i = 0; i < inputs.Count; i++)
+            //Validacion cruzada para obtener el mejor conjunto de prueba.
+            if (configuration.CrossValidation && configuration.TestSize != 0)
             {
-                var input = inputs[i];
-                var output = normalizedOutputs[i];
-                perceptron.Learn(input.training.ToArray(), output.training.ToArray(), input.testing.ToArray(), 
-                    output.testing.ToArray(), configuration.Batch.Value, configuration.MinError.Value, configuration.Epochs);
-                var error = perceptron.CalculateError(input.testing.ToArray(), output.testing.ToArray());
-                if (error < minError || minError == -1)
+                double minError = -1;
+                for (int i = 0; i < inputs.Count; i++)
                 {
-                    minError = error;
-                    optimumInput = input;
-                    optimumOutput = outputs[i];
-                }
+                    var input = inputs[i];
+                    var output = normalizedOutputs[i];
+                    perceptron.Learn(input.training.ToArray(), output.training.ToArray(), input.testing.ToArray(),
+                        output.testing.ToArray(), configuration.Batch, configuration.MinError, configuration.Epochs);
+                    var error = perceptron.CalculateError(input.testing.ToArray(), output.testing.ToArray());
+                    if (error < minError || minError == -1)
+                    {
+                        minError = error;
+                        optimumInput = input;
+                        optimumOutput = outputs[i];
+                    }
 
+                }
+            }
+            else
+            {
+                optimumInput = inputs[0];
+                optimumOutput = normalizedOutputs[0];
             }
             //Entreno al perceptron con el input y output optimo encontrado por el metodo de validacion cruzada.
             perceptron.Learn(optimumInput.training.ToArray(), optimumOutput.training.ToArray(), optimumInput.testing.ToArray(),
-                optimumOutput.testing.ToArray(), configuration.Batch.Value, configuration.MinError.Value, configuration.Epochs);
+                optimumOutput.testing.ToArray(), configuration.Batch, configuration.MinError, configuration.Epochs);
             
             Console.WriteLine("Training Set: ");
             PrintOutput(perceptron, optimumInput.training, optimumOutput.training, configuration.Activation);
+            var totalError = perceptron.CalculateError(optimumInput.training.ToArray(), optimumOutput.training.ToArray());
+            Console.WriteLine($"Total Training Error: {totalError}");
             Console.WriteLine();
-            Console.WriteLine("Testing Set: ");
-            PrintOutput(perceptron, optimumInput.testing, optimumOutput.testing, configuration.Activation);
-            Console.WriteLine();
-            Console.WriteLine($"Total Testing Error: {minError}");
+            if(optimumInput.testing.Length > 0)
+            {
+                Console.WriteLine("Testing Set: ");
+                PrintOutput(perceptron, optimumInput.testing, optimumOutput.testing, configuration.Activation);
+                totalError = perceptron.CalculateError(optimumInput.testing.ToArray(), optimumOutput.testing.ToArray());
+                Console.WriteLine($"Total Testing Error: {totalError}");
+                Console.WriteLine();
+            }
         }
 
     }
