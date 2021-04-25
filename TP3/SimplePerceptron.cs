@@ -7,6 +7,7 @@ using MathNet.Numerics.Random;
 using MathNet.Numerics.Distributions;
 using System.Linq;
 using MathNet.Numerics;
+using Accord.Math.Optimization;
 
 namespace TP3
 {
@@ -46,6 +47,69 @@ namespace TP3
         }
         public double CalculateError(Vector<double>[] input, Vector<double>[] desiredOutput) => CalculateError(input, desiredOutput.Select(o => o.At(0)).ToArray(), W);
 
+
+        private double optimizing(
+            int n,
+            int p,
+            Vector<double> w,
+            Vector<double>[] input,
+            double[] desiredTrainingOutput,
+            Vector<double> deltaW,
+            int batch,
+            double error,
+            double error_min,
+            Vector<double> w_min)
+        {
+            Func<double, double> function = x => loop(n, p, w, input, desiredTrainingOutput, deltaW, batch, error, error_min, w_min, x);
+            BrentSearch search = new BrentSearch(function, 0, 1);
+            bool success = search.Minimize();
+            double min = search.Solution;
+
+            return min;
+        }
+
+        private double loop(
+            int n,
+            int p,
+            Vector<double> w,
+            Vector<double>[] input,
+            double[] desiredTrainingOutput,
+            Vector<double> deltaW,
+            int batch,
+            double error,
+            double error_min,
+            Vector<double> w_min,
+            double lr)
+        {
+            if (n > 100 * p)
+            {
+                w = CreateVector.Random<double>(N + 1, new ContinuousUniform(-1d, 1d));
+                n = 0;
+            }
+            int[] rand = Combinatorics.GeneratePermutation(input.Length);
+            for (int j = 0; j < input.Length; j++)
+            {
+                int ix = rand[j];
+                double h = input[ix] * w;
+                double act = ActivationFunction(h);
+                Vector<double> delta = lr * (desiredTrainingOutput[ix] - act) * input[ix] * ActivationFunctionDerivative(h);
+                deltaW = deltaW == null ? delta : deltaW + delta;
+                if (j % batch == 0)
+                {
+                    w += deltaW;
+                    deltaW = null;
+                    error = CalculateError(input, desiredTrainingOutput, w);
+                    if (error < error_min)
+                    {
+                        error_min = error;
+                        w_min = w;
+                    }
+                }
+            }
+            return error;
+        }
+
+
         public void Learn(
             Vector<double>[] trainingInput,
             Vector<double>[] trainingOutput,
@@ -77,6 +141,7 @@ namespace TP3
 
             for(int i = 0, n = 0; i < epochs && error_min > minError; i++, n++)
             {
+                double lr = optimizing(n, p, w, input, desiredTrainingOutput, deltaW, batch, error, error_min, w_min);
                 if (n > 100 * p)
                 {
                     w = CreateVector.Random<double>(N + 1, new ContinuousUniform(-1d, 1d));

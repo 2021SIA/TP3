@@ -5,6 +5,8 @@ using System.Text;
 using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.Random;
+using Accord.Math.Optimization;
+
 
 namespace TP3
 {
@@ -34,6 +36,7 @@ namespace TP3
             }
             return sum * 0.5d;
         }
+        
 
         public Vector<double> Map(Vector<double> input)
         {
@@ -46,6 +49,87 @@ namespace TP3
                 V = (W[k] * V).Map(g[k]);
             }
             return V;
+        }
+        
+        private double optimizing(Vector<double>[] input,
+            Vector<double>[] V,
+            int M,
+            Vector<double>[] h,
+            Vector<double>[] delta,
+            Vector<double>[] trainingOutput,
+            Matrix<double>[] deltaW,
+            int batch,
+            double error)
+        {
+            Func<double, double> function = x => loop(input, V, M, h, delta, trainingOutput, deltaW, batch, error, x);
+            BrentSearch search = new BrentSearch(function, 0, 1);
+            bool success = search.Minimize();   
+            double min = search.Solution;
+
+            return min;
+        }
+
+
+        
+
+        private double loop(
+            Vector<double>[] input,
+            Vector<double>[] V,
+            int M,
+            Vector<double>[] h,
+            Vector<double>[] delta,
+            Vector<double>[] trainingOutput,
+            Matrix<double>[] deltaW,
+            int batch,
+            double error,
+            double lr
+            )
+        {
+            int[] rand = Combinatorics.GeneratePermutation(input.Length);
+            int j;
+            for (j = 0; j < input.Length; j++)
+            {
+                int index = rand[j];
+                V[0] = input[index];
+                for(int k = 0; k < M; k++)
+                {
+                    h[k] = W[k] * V[k];
+                    Vector<double> activationOutput = h[k].Map(g[k]);
+                    //Agrego el valor 1 al principio de cada salida intermedia.
+                    V[k + 1] = k + 1 < M ? Vector<double>.Build.DenseOfEnumerable(new double[]{1}.Concat(activationOutput)) : activationOutput;
+                }
+                delta[M - 1] = h[M - 1].Map(gprime[M - 1]).PointwiseMultiply(trainingOutput[index] - V[M]);
+                for (int k = M - 1; k > 0; k--)
+                {
+                    var aux = W[k].TransposeThisAndMultiply(delta[k]);
+                    //Salteo el primer valor ya que corresponde al delta de la neurona extra para el umbral (siempre tiene que tener activacion igual a 1).
+                    aux = Vector<double>.Build.DenseOfEnumerable(aux.Skip(1));
+                    delta[k - 1] = h[k - 1].Map(gprime[k - 1]).PointwiseMultiply(aux);
+
+                }
+                
+                for (int k = 0; k < M; k++)
+                {
+                    if(deltaW[k] != null)
+                        deltaW[k] += lr * delta[k].OuterProduct(V[k]);
+                    else
+                        deltaW[k] = lr * delta[k].OuterProduct(V[k]);
+                }
+
+                if(j % batch == 0)
+                {
+                    for (int k = 0; k < M; k++)
+                        W[k] += deltaW[k];
+                    //Reinicio los deltaW para el proximo lote.
+                    Array.Fill(deltaW, null);
+                }
+            }
+            if(j % batch != 0)
+                for (int k = 0; k < M; k++)
+                    W[k] += deltaW[k];
+            
+            error = CalculateError(input, trainingOutput);
+            return error;
         }
 
         public void Learn(
@@ -77,20 +161,24 @@ namespace TP3
 
             for(int i = 0; i < epochs && error > minError; i++)
             {
+
+                double lr = optimizing(input, V, M, h, delta, trainingOutput, deltaW, batch, error);
                 int[] rand = Combinatorics.GeneratePermutation(input.Length);
                 int j;
                 for (j = 0; j < input.Length; j++)
                 {
                     int index = rand[j];
                     V[0] = input[index];
-                    for(int k = 0; k < M; k++)
+                    for (int k = 0; k < M; k++)
                     {
                         h[k] = W[k] * V[k];
                         Vector<double> activationOutput = h[k].Map(g[k]);
                         //Agrego el valor 1 al principio de cada salida intermedia.
-                        V[k + 1] = k + 1 < M ? Vector<double>.Build.DenseOfEnumerable(new double[]{1}.Concat(activationOutput)) : activationOutput;
+                        V[k + 1] = k + 1 < M ? Vector<double>.Build.DenseOfEnumerable(new double[] { 1 }.Concat(activationOutput)) : activationOutput;
+                        
                     }
                     delta[M - 1] = h[M - 1].Map(gprime[M - 1]).PointwiseMultiply(trainingOutput[index] - V[M]);
+                    
                     for (int k = M - 1; k > 0; k--)
                     {
                         var aux = W[k].TransposeThisAndMultiply(delta[k]);
@@ -99,15 +187,22 @@ namespace TP3
                         delta[k - 1] = h[k - 1].Map(gprime[k - 1]).PointwiseMultiply(aux);
 
                     }
+
                     for (int k = 0; k < M; k++)
                     {
-                        if(deltaW[k] != null)
-                            deltaW[k] += LearningRate * delta[k].OuterProduct(V[k]);
+                        if (deltaW[k] != null)
+                        {
+                            deltaW[k] += lr * delta[k].OuterProduct(V[k]);
+                            //deltaW[k] += LearningRate * delta[k].OuterProduct(V[k]);
+                        }                           
                         else
-                            deltaW[k] = LearningRate * delta[k].OuterProduct(V[k]);
+                        {
+                            deltaW[k] = lr * delta[k].OuterProduct(V[k]);
+                            //deltaW[k] = LearningRate * delta[k].OuterProduct(V[k]);
+                        }
                     }
 
-                    if(j % batch == 0)
+                    if (j % batch == 0)
                     {
                         for (int k = 0; k < M; k++)
                             W[k] += deltaW[k];
@@ -115,11 +210,11 @@ namespace TP3
                         Array.Fill(deltaW, null);
                     }
                 }
-                if(j % batch != 0)
+                if (j % batch != 0)
                     for (int k = 0; k < M; k++)
                         W[k] += deltaW[k];
-
                 error = CalculateError(input, trainingOutput);
+
             }
         }
     }
