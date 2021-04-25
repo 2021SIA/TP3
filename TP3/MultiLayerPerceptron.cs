@@ -62,7 +62,7 @@ namespace TP3
             double error,
             int[] rand)
         {
-            Func<double, double> function = x => loop(input, V, M, h, delta, trainingOutput, deltaW, batch, error, x, rand);
+            Func<double, double> function = x => loop(input, V, M, h, delta, trainingOutput, deltaW, batch, error, x, rand, W);
             BrentSearch search = new BrentSearch(function, 0, 1);
             bool success = search.Minimize();   
             double min = search.Solution;
@@ -84,7 +84,8 @@ namespace TP3
             int batch,
             double error,
             double lr,
-            int[] rand)
+            int[] rand,
+            Matrix<double>[] W)
         {
             int j;
             for (j = 0; j < input.Length; j++)

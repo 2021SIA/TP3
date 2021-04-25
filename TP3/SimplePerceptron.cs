@@ -104,8 +104,10 @@ namespace TP3
                     }
                 }
             }
-            return error;
+            return error_min;
         }
+
+
 
 
         public void Learn(
