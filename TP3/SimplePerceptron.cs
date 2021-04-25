@@ -8,6 +8,7 @@ using MathNet.Numerics.Distributions;
 using System.Linq;
 using MathNet.Numerics;
 using Accord.Math.Optimization;
+using System.IO;
 
 namespace TP3
 {
@@ -49,19 +50,16 @@ namespace TP3
 
 
         private double optimizing(
-            int n,
-            int p,
             Vector<double> w,
             Vector<double>[] input,
             double[] desiredTrainingOutput,
             Vector<double> deltaW,
             int batch,
             double error,
-            double error_min,
             Vector<double> w_min,
             int[] rand)
         {
-            Func<double, double> function = x => loop(n, p, w, input, desiredTrainingOutput, deltaW, batch, error, error_min, w_min, x, rand);
+            Func<double, double> function = x => loop(w, input, desiredTrainingOutput, deltaW, batch, error, w_min, x, rand);
             BrentSearch search = new BrentSearch(function, 0, 1);
             bool success = search.Minimize();
             double min = search.Solution;
@@ -70,21 +68,18 @@ namespace TP3
         }
 
         private double loop(
-            int n,
-            int p,
             Vector<double> w,
             Vector<double>[] input,
             double[] desiredTrainingOutput,
             Vector<double> deltaW,
             int batch,
             double error,
-            double error_min,
             Vector<double> w_min,
             double lr,
             int[] rand)
         {
 
-            
+            double error_min = -1;
             for (int j = 0; j < input.Length; j++)
             {
                 int ix = rand[j];
@@ -97,14 +92,19 @@ namespace TP3
                     w += deltaW;
                     deltaW = null;
                     error = CalculateError(input, desiredTrainingOutput, w);
-                    if (error < error_min)
+                    if(error_min == -1)
+                    {
+                        error_min = error;
+                    }
+                    else if (error < error_min)
                     {
                         error_min = error;
                         w_min = w;
                     }
                 }
             }
-            return error_min;
+            error = CalculateError(input, desiredTrainingOutput, w_min);
+            return error;
         }
 
 
@@ -141,7 +141,7 @@ namespace TP3
 
             for(int i = 0, n = 0; i < epochs && error_min > minError; i++, n++)
             {
-                
+                Console.WriteLine("{0}", i);
                 if (n > 100 * p)
                 {
                     w = CreateVector.Random<double>(N + 1, new ContinuousUniform(-1d, 1d));
@@ -149,13 +149,23 @@ namespace TP3
                 }
                 
                 int[] rand = Combinatorics.GeneratePermutation(input.Length);
-                double lr = optimizing(n, p, w, input, desiredTrainingOutput, deltaW, batch, error, error_min, w_min, rand);
+                double lr = optimizing( w, input, desiredTrainingOutput, deltaW, batch, error, w_min, rand);
+                try
+                {
+                    StreamWriter sw = File.AppendText(@"lrVsEpoch.txt");
+                    sw.WriteLine("{0}\t{1}",i , lr);
+                    sw.Close();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Exception: " + e.Message);
+                }
                 for (int j = 0; j < input.Length; j++)
                 {
                     int ix = rand[j];
                     double h = input[ix] * w;
                     double act = ActivationFunction(h);
-                    Vector<double> delta = LearningRate * (desiredTrainingOutput[ix] - act) * input[ix] * ActivationFunctionDerivative(h);
+                    Vector<double> delta = lr * (desiredTrainingOutput[ix] - act) * input[ix] * ActivationFunctionDerivative(h);
                     deltaW = deltaW == null ? delta : deltaW + delta;
                     if (j % batch == 0)
                     {
