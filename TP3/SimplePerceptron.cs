@@ -19,14 +19,16 @@ namespace TP3
         public Func<double, double> ActivationFunction { get; }
         public Func<double, double> ActivationFunctionDerivative { get; }
         public double LearningRate { get; set; }
+        public bool AdaptiveLearningRate { get; set; }
 
-        public SimplePerceptron(int N, double learningRate, Func<double, double> activationFunction, Func<double, double> activationFunctionDerivative)
+        public SimplePerceptron(int N, double learningRate, Func<double, double> activationFunction, Func<double, double> activationFunctionDerivative, bool adaptiveLearningRate)
         {
             this.N = N;
             this.W = CreateVector.Random<double>(N + 1, new ContinuousUniform(-1d, 1d));
             this.ActivationFunction = activationFunction;
             this.ActivationFunctionDerivative = activationFunctionDerivative;
             this.LearningRate = learningRate;
+            this.AdaptiveLearningRate = adaptiveLearningRate;
         }
         private double CalculateError(Vector<double>[] input, double[] desiredOutput, Vector<double> w)
         {
@@ -59,7 +61,7 @@ namespace TP3
             Vector<double> w_min,
             int[] rand)
         {
-            Func<double, double> function = x => loop(w, input, desiredTrainingOutput, deltaW, batch, error, w_min, x, rand);
+            Func<double, double> function = x => loop(w, input, desiredTrainingOutput, batch, x, rand);
             BrentSearch search = new BrentSearch(function, 0, 1);
             bool success = search.Minimize();
             double min = search.Solution;
@@ -71,15 +73,13 @@ namespace TP3
             Vector<double> w,
             Vector<double>[] input,
             double[] desiredTrainingOutput,
-            Vector<double> deltaW,
             int batch,
-            double error,
-            Vector<double> w_min,
             double lr,
             int[] rand)
         {
 
-            double error_min = -1;
+            Vector<double> deltaW = null;
+            double error = 0, error_min = -1;
             for (int j = 0; j < input.Length; j++)
             {
                 int ix = rand[j];
@@ -92,19 +92,11 @@ namespace TP3
                     w += deltaW;
                     deltaW = null;
                     error = CalculateError(input, desiredTrainingOutput, w);
-                    if(error_min == -1)
-                    {
+                    if (error_min == -1 || error < error_min)
                         error_min = error;
-                    }
-                    else if (error < error_min)
-                    {
-                        error_min = error;
-                        w_min = w;
-                    }
                 }
             }
-            error = CalculateError(input, desiredTrainingOutput, w_min);
-            return error;
+            return error_min;
         }
 
 
@@ -117,7 +109,7 @@ namespace TP3
             Vector<double>[] testOutput,
             int batch,
             double minError,
-            int epochs = 100)
+            int epochs)
         {
             Contract.Requires(trainingInput.Length == trainingOutput.Length);
             Contract.Requires(testInput.Length == testOutput.Length);
@@ -137,11 +129,10 @@ namespace TP3
             Vector<double> w = CreateVector.Random<double>(N + 1, new ContinuousUniform(-1d, 1d));
             Vector<double> deltaW = null;
             double error = 1, error_min = p * 2;
-            Vector<double> w_min = W;
+            Vector<double> w_min = w;
 
             for(int i = 0, n = 0; i < epochs && error_min > minError; i++, n++)
             {
-                Console.WriteLine("{0}", i);
                 if (n > 100 * p)
                 {
                     w = CreateVector.Random<double>(N + 1, new ContinuousUniform(-1d, 1d));
@@ -149,7 +140,7 @@ namespace TP3
                 }
                 
                 int[] rand = Combinatorics.GeneratePermutation(input.Length);
-                double lr = optimizing( w, input, desiredTrainingOutput, deltaW, batch, error, w_min, rand);
+                double lr = this.AdaptiveLearningRate ? optimizing( w, input, desiredTrainingOutput, deltaW, batch, error, w_min, rand) : LearningRate;
                 try
                 {
                     StreamWriter sw = File.AppendText(@"lrVsEpoch.txt");
@@ -160,7 +151,8 @@ namespace TP3
                 {
                     Console.WriteLine("Exception: " + e.Message);
                 }
-                for (int j = 0; j < input.Length; j++)
+                int j;
+                for (j = 0; j < input.Length; j++)
                 {
                     int ix = rand[j];
                     double h = input[ix] * w;
@@ -177,6 +169,17 @@ namespace TP3
                             error_min = error;
                             w_min = w;
                         }
+                    }
+                }
+                if (j % batch != 0)
+                {
+                    w += deltaW;
+                    deltaW = null;
+                    error = CalculateError(input, desiredTrainingOutput, w);
+                    if (error < error_min)
+                    {
+                        error_min = error;
+                        w_min = w;
                     }
                 }
             }

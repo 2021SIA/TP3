@@ -1,4 +1,5 @@
-﻿using MathNet.Numerics.LinearAlgebra;
+﻿using MathNet.Numerics;
+using MathNet.Numerics.LinearAlgebra;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,10 +28,10 @@ namespace TP3
                 confusionMatrix[row, col] += 1;
             }
             double accuracy = (confusionMatrix[0, 0] + confusionMatrix[1, 1]) / confusionMatrix.ReduceColumns((val, c) => val + c).Aggregate(0.0, (val, c) => val + c);
-            double precision = confusionMatrix[0, 0] / (confusionMatrix[0, 0] + confusionMatrix[1, 0]);
-            double recall = confusionMatrix[0, 0] / (confusionMatrix[0, 0] + confusionMatrix[0, 1]);
-            double f1Score = (2 * precision * recall) / (precision + recall);
-            return new ClassifierMetrics() { Accuracy = accuracy,Precision = precision,Recall = recall, F1Score = f1Score};
+            double precision = confusionMatrix[0, 0] != 0 ? confusionMatrix[0, 0] / (confusionMatrix[0, 0] + confusionMatrix[1, 0]) : 0;
+            double recall = confusionMatrix[0, 0] != 0 ? confusionMatrix[0, 0] / (confusionMatrix[0, 0] + confusionMatrix[0, 1]) : 0;
+            double f1Score = precision != 0 && recall != 0 ? (2 * precision * recall) / (precision + recall) : 0;
+            return new ClassifierMetrics() { Accuracy = accuracy,Precision = precision,Recall = recall, F1Score = f1Score };
         }
         public static double Sigmoid(double value)
         {
@@ -47,21 +48,29 @@ namespace TP3
         {
             return vector.Map(value => ((value - min) / (max - min)) * (rangeTop - rangeBottom) + rangeBottom);
         }
-        public static List<(Vector<double>[], Vector<double>[])> GetAllTestGroups(IEnumerable<Vector<double>> training, int testSize)
+        public static (List<(Vector<double>[], Vector<double>[])>, List<(Vector<double>[], Vector<double>[])>) GetNTestGroups(IEnumerable<Vector<double>> input, IEnumerable<Vector<double>> output, int testSize, int N)
         {
-            var groups = new List<(Vector<double>[], Vector<double>[])>();
+            var inputGroups = new List<(Vector<double>[], Vector<double>[])>();
+            var outputGroups = new List<(Vector<double>[], Vector<double>[])>();
             if (testSize == 0)
             {
-                groups.Add((training.ToArray(), new Vector<double>[0]));
+                inputGroups.Add((input.ToArray(), new Vector<double>[0]));
+                outputGroups.Add((output.ToArray(), new Vector<double>[0]));
             }
             else
             {
-                for (int i = 0; i < training.Count() / testSize; i++)
+                for (int i = 0; i < N; i++)
                 {
-                    groups.Add((training.Take(testSize * i).Concat(training.Skip(testSize * (i + 1))).ToArray(), training.Skip(testSize * i).Take(testSize).ToArray()));
+                    int[] rand = Combinatorics.GeneratePermutation(input.Count());
+                    var testInput = rand.Take(testSize).Select(input.ElementAt);
+                    var trainInput = rand.Skip(testSize).Select(input.ElementAt);
+                    var testOutput = rand.Take(testSize).Select(output.ElementAt);
+                    var trainOutput = rand.Skip(testSize).Select(output.ElementAt);
+                    inputGroups.Add((testInput.ToArray(), trainInput.ToArray()));
+                    outputGroups.Add((testOutput.ToArray(), trainOutput.ToArray()));
                 }
             }
-            return groups;
+            return (inputGroups,outputGroups);
         }
     }
 }

@@ -78,8 +78,9 @@ namespace TP3
                 //Si se usa validacion cruzada, obtengo los k conjuntos de entrenamiento con su respectivo conjunto de prueba.
                 if (configuration.CrossValidation && configuration.TestSize != 0.0)
                 {
-                    inputs = GetAllTestGroups(trainingInput, (int)Math.Round(configuration.TestSize * trainingInput.Count));
-                    outputs = GetAllTestGroups(trainingOutput, (int)Math.Round(configuration.TestSize * trainingInput.Count));
+                    var groups = GetNTestGroups(trainingInput, trainingOutput, (int)Math.Round(configuration.TestSize * trainingInput.Count), configuration.CrossValidationK);
+                    inputs = groups.Item1;
+                    outputs = groups.Item2;
                 }
                 //Si no se usa validacion cruzada, solo tomo como conjunto de prueba los ultimos TestSize del conjunto de entrenamiento.
                 else
@@ -138,7 +139,8 @@ namespace TP3
                         trainingInput[0].Count,
                         configuration.LearningRate,
                         activationFunction,
-                        activationFunctionD);
+                        activationFunctionD,
+                        configuration.AdaptiveLearningRate);
                     break;
                 case "multilayer":
                     var activations = new Func<double, double>[configuration.Layers.Length];
@@ -149,7 +151,8 @@ namespace TP3
                         configuration.Layers,
                         configuration.LearningRate,
                         activations,
-                        activationsD);
+                        activationsD,
+                        configuration.AdaptiveLearningRate);
                     break;
                 default: Console.WriteLine("Ingrese el tipo de perceptrón.");return;
             }

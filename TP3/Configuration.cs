@@ -17,8 +17,10 @@ namespace TP2
         public int[] Layers { get; set; } = null;
         public double MinError { get; set; } = 0.0;
         public bool CrossValidation { get; set; } = false;
+        public int CrossValidationK { get; set; } = 10;
         public int InputLines { get; set; } = 1;
         public int OutputLines { get; set; } = 1;
+        public bool AdaptiveLearningRate { get; set; } = false;
 
         public static Configuration FromYamlFile(string path)
         {
