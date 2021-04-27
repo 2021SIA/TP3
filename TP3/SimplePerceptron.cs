@@ -55,10 +55,7 @@ namespace TP3
             Vector<double> w,
             Vector<double>[] input,
             double[] desiredTrainingOutput,
-            Vector<double> deltaW,
             int batch,
-            double error,
-            Vector<double> w_min,
             int[] rand)
         {
             Func<double, double> function = x => loop(w, input, desiredTrainingOutput, batch, x, rand);
@@ -140,17 +137,7 @@ namespace TP3
                 }
                 
                 int[] rand = Combinatorics.GeneratePermutation(input.Length);
-                double lr = this.AdaptiveLearningRate ? optimizing( w, input, desiredTrainingOutput, deltaW, batch, error, w_min, rand) : LearningRate;
-                try
-                {
-                    StreamWriter sw = File.AppendText(@"lrVsEpoch.txt");
-                    sw.WriteLine("{0}\t{1}",i , lr);
-                    sw.Close();
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("Exception: " + e.Message);
-                }
+                double lr = this.AdaptiveLearningRate ? optimizing( w, input, desiredTrainingOutput, batch, rand) : LearningRate;
                 int j;
                 for (j = 0; j < input.Length; j++)
                 {

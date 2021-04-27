@@ -63,6 +63,11 @@ namespace TP3
         /// <param name="config">Path to the configuration file</param>
         static void Main(string config)
         {
+            if(config == null || config.Length == 0)
+            {
+                Console.WriteLine("Ingrese el nombre del archivo de configuración.");
+                return;
+            }
             Configuration configuration = Configuration.FromYamlFile(config);
 
             //Obtengo los conjuntos de entrenamiento y prueba.

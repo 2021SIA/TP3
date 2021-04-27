@@ -177,7 +177,7 @@ namespace TP3
             for(int i = 0; i < epochs && error_min > minError; i++)
             {
 
-                
+
                 int[] rand = Combinatorics.GeneratePermutation(input.Length);
                 double lr = AdaptiveLearningRate ? optimizing(input, V, w, M, h, delta, trainingOutput, deltaW, batch, error, rand) : LearningRate;
                 int j;
